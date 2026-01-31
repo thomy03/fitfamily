@@ -1,0 +1,173 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String?
+  avatar        String?   // Emoji
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  profile       Profile?
+  family        Family?   @relation(fields: [familyId], references: [id])
+  familyId      String?
+  meals         Meal[]
+  workouts      Workout[]
+  weightLogs    WeightLog[]
+  pushSubs      PushSubscription[]
+}
+
+model Profile {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  birthDate     DateTime?
+  height        Float?    // cm
+  weight        Float?    // kg
+  gender        Gender?
+  activityLevel ActivityLevel @default(MODERATE)
+  goal          Goal      @default(MAINTAIN)
+  targetWeight  Float?    // kg
+  
+  // Calculated fields (updated on profile change)
+  bmi           Float?
+  bmr           Float?    // Basal Metabolic Rate
+  tdee          Float?    // Total Daily Energy Expenditure
+  dailyCalories Int?      // Target calories based on goal
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Family {
+  id          String   @id @default(cuid())
+  name        String
+  inviteCode  String   @unique @default(cuid())
+  createdAt   DateTime @default(now())
+  
+  members     User[]
+}
+
+model Meal {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name        String
+  description String?
+  imageUrl    String?  // Photo du repas
+  mealType    MealType
+  date        DateTime @default(now())
+  
+  // Nutritional info (can be AI-analyzed)
+  calories    Int?
+  protein     Float?   // g
+  carbs       Float?   // g
+  fat         Float?   // g
+  fiber       Float?   // g
+  
+  aiAnalysis  String?  // JSON of AI analysis
+  
+  createdAt   DateTime @default(now())
+}
+
+model Workout {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name        String
+  type        WorkoutType
+  duration    Int      // minutes
+  calories    Int?     // burned
+  date        DateTime @default(now())
+  
+  exercises   Exercise[]
+  
+  completed   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model Exercise {
+  id          String   @id @default(cuid())
+  workoutId   String
+  workout     Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  
+  name        String
+  sets        Int?
+  reps        Int?
+  duration    Int?     // seconds
+  restTime    Int?     // seconds
+  calories    Int?
+  
+  completed   Boolean  @default(false)
+}
+
+model WeightLog {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  weight      Float    // kg
+  date        DateTime @default(now())
+  note        String?
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum ActivityLevel {
+  SEDENTARY     // Little or no exercise
+  LIGHT         // Light exercise 1-3 days/week
+  MODERATE      // Moderate exercise 3-5 days/week
+  ACTIVE        // Hard exercise 6-7 days/week
+  VERY_ACTIVE   // Very hard exercise & physical job
+}
+
+enum Goal {
+  LOSE          // Lose weight
+  MAINTAIN      // Maintain weight
+  GAIN          // Gain muscle/weight
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+enum WorkoutType {
+  CARDIO
+  STRENGTH
+  FLEXIBILITY
+  HIIT
+  YOGA
+  WALKING
+  RUNNING
+  CYCLING
+  SWIMMING
+  OTHER
+}
