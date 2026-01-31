@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { NotificationPrompt } from "@/components/NotificationPrompt"
 
 export default function AppLayout({
   children,
@@ -21,6 +22,9 @@ export default function AppLayout({
           <NavItem href="/profile" icon="👤" label="Profil" />
         </div>
       </nav>
+
+      {/* Notification Prompt */}
+      <NotificationPrompt />
     </div>
   )
 }
