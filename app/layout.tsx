@@ -4,7 +4,7 @@ import "./globals.css"
 
 export const metadata: Metadata = {
   title: "FitFamily",
-  description: "Remise en forme familiale - Suivi calories, sport et objectifs",
+  description: "Gestion du budget familial",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -12,8 +12,12 @@ export const metadata: Metadata = {
     title: "FitFamily",
   },
   icons: {
-    icon: "/icon-192.png",
-    apple: "/icon-192.png",
+    icon: [
+      { url: "/favicon-16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
   },
 }
 

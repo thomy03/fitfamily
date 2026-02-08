@@ -12,7 +12,7 @@ model User {
   name          String?
   email         String    @unique
   password      String?
-  avatar        String?   // Emoji
+  avatar        String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -23,6 +23,10 @@ model User {
   workouts      Workout[]
   weightLogs    WeightLog[]
   pushSubs      PushSubscription[]
+  supplements   Supplement[]
+  bloodTests    BloodTest[]
+  chatMessages  ChatMessage[]
+  settings      UserSettings?
 }
 
 model Profile {
@@ -31,18 +35,17 @@ model Profile {
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   birthDate     DateTime?
-  height        Float?    // cm
-  weight        Float?    // kg
+  height        Float?
+  weight        Float?
   gender        Gender?
   activityLevel ActivityLevel @default(MODERATE)
   goal          Goal      @default(MAINTAIN)
-  targetWeight  Float?    // kg
+  targetWeight  Float?
   
-  // Calculated fields (updated on profile change)
   bmi           Float?
-  bmr           Float?    // Basal Metabolic Rate
-  tdee          Float?    // Total Daily Energy Expenditure
-  dailyCalories Int?      // Target calories based on goal
+  bmr           Float?
+  tdee          Float?
+  dailyCalories Int?
   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -53,7 +56,6 @@ model Family {
   name        String
   inviteCode  String   @unique @default(cuid())
   createdAt   DateTime @default(now())
-  
   members     User[]
 }
 
@@ -64,19 +66,17 @@ model Meal {
   
   name        String
   description String?
-  imageUrl    String?  // Photo du repas
+  imageUrl    String?
   mealType    MealType
   date        DateTime @default(now())
   
-  // Nutritional info (can be AI-analyzed)
   calories    Int?
-  protein     Float?   // g
-  carbs       Float?   // g
-  fat         Float?   // g
-  fiber       Float?   // g
+  protein     Float?
+  carbs       Float?
+  fat         Float?
+  fiber       Float?
   
-  aiAnalysis  String?  // JSON of AI analysis
-  
+  aiAnalysis  String?
   createdAt   DateTime @default(now())
 }
 
@@ -87,12 +87,10 @@ model Workout {
   
   name        String
   type        WorkoutType
-  duration    Int      // minutes
-  calories    Int?     // burned
+  duration    Int
+  calories    Int?
   date        DateTime @default(now())
-  
   exercises   Exercise[]
-  
   completed   Boolean  @default(false)
   createdAt   DateTime @default(now())
 }
@@ -105,10 +103,9 @@ model Exercise {
   name        String
   sets        Int?
   reps        Int?
-  duration    Int?     // seconds
-  restTime    Int?     // seconds
+  duration    Int?
+  restTime    Int?
   calories    Int?
-  
   completed   Boolean  @default(false)
 }
 
@@ -117,7 +114,7 @@ model WeightLog {
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  weight      Float    // kg
+  weight      Float
   date        DateTime @default(now())
   note        String?
 }
@@ -132,6 +129,78 @@ model PushSubscription {
   createdAt DateTime @default(now())
 }
 
+// ========== NOUVEAUX MODÈLES ==========
+
+model Supplement {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name        String
+  brand       String?
+  dosage      String?
+  frequency   String   @default("daily")
+  timeOfDay   String?
+  purchaseUrl String?
+  notes       String?
+  active      Boolean  @default(true)
+  
+  logs        SupplementLog[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SupplementLog {
+  id           String     @id @default(cuid())
+  supplementId String
+  supplement   Supplement @relation(fields: [supplementId], references: [id], onDelete: Cascade)
+  takenAt      DateTime   @default(now())
+  notes        String?
+}
+
+model BloodTest {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  date      DateTime
+  labName   String?
+  results   Json
+  notes     String?
+  fileUrl   String?
+  
+  createdAt DateTime @default(now())
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  role      String
+  content   String
+  provider  String?
+  
+  createdAt DateTime @default(now())
+}
+
+model UserSettings {
+  id              String  @id @default(cuid())
+  userId          String  @unique
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  groqApiKey      String?
+  openaiApiKey    String?
+  claudeApiKey    String?
+  geminiApiKey    String?
+  defaultProvider String  @default("groq")
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ========== ENUMS ==========
+
 enum Gender {
   MALE
   FEMALE
@@ -139,17 +208,17 @@ enum Gender {
 }
 
 enum ActivityLevel {
-  SEDENTARY     // Little or no exercise
-  LIGHT         // Light exercise 1-3 days/week
-  MODERATE      // Moderate exercise 3-5 days/week
-  ACTIVE        // Hard exercise 6-7 days/week
-  VERY_ACTIVE   // Very hard exercise & physical job
+  SEDENTARY
+  LIGHT
+  MODERATE
+  ACTIVE
+  VERY_ACTIVE
 }
 
 enum Goal {
-  LOSE          // Lose weight
-  MAINTAIN      // Maintain weight
-  GAIN          // Gain muscle/weight
+  LOSE
+  MAINTAIN
+  GAIN
 }
 
 enum MealType {

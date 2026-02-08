@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981"/>
+      <stop offset="100%" style="stop-color:#059669"/>
+    </linearGradient>
+    <linearGradient id="lightGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#34d399"/>
+      <stop offset="100%" style="stop-color:#10b981"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background rounded square -->
+  <rect x="0" y="0" width="512" height="512" rx="100" ry="100" fill="url(#bgGrad)"/>
+  
+  <!-- Decorative circle accent -->
+  <circle cx="420" cy="100" r="80" fill="rgba(255,255,255,0.1)"/>
+  <circle cx="80" cy="430" r="60" fill="rgba(255,255,255,0.08)"/>
+  
+  <!-- House/Family icon combined with chart -->
+  <!-- House base -->
+  <path d="M256 100 L380 200 L380 380 Q380 400 360 400 L152 400 Q132 400 132 380 L132 200 Z" 
+        fill="white" opacity="0.95"/>
+  
+  <!-- Roof accent -->
+  <path d="M256 100 L380 200 L340 200 L256 135 L172 200 L132 200 Z" 
+        fill="url(#lightGrad)" opacity="0.3"/>
+  
+  <!-- Chart bars inside house (representing budget/finance) -->
+  <rect x="165" y="310" width="45" height="70" rx="8" fill="#10b981"/>
+  <rect x="233" y="260" width="45" height="120" rx="8" fill="#059669"/>
+  <rect x="301" y="230" width="45" height="150" rx="8" fill="#047857"/>
+  
+  <!-- Heart on top (family) -->
+  <path d="M256 175 C240 155, 210 155, 210 185 C210 210, 256 245, 256 245 C256 245, 302 210, 302 185 C302 155, 272 155, 256 175 Z" 
+        fill="#f43f5e"/>
+</svg>
