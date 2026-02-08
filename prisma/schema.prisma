@@ -17,6 +17,7 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   profile       Profile?
+  healthProfile HealthProfile?
   family        Family?   @relation(fields: [familyId], references: [id])
   familyId      String?
   meals         Meal[]
@@ -27,6 +28,7 @@ model User {
   bloodTests    BloodTest[]
   chatMessages  ChatMessage[]
   settings      UserSettings?
+  recommendations Recommendation[]
 }
 
 model Profile {
@@ -49,6 +51,93 @@ model Profile {
   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+}
+
+// Nouveau: Profil Santé Avancé
+model HealthProfile {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Objectifs
+  primaryGoal   HealthGoal @default(GENERAL_HEALTH)
+  secondaryGoals String[]  // Array of HealthGoal values
+  
+  // Budget
+  monthlyBudget Int?      // Budget mensuel compléments en euros
+  
+  // Mode de vie
+  sleepHours    Float?    // Heures de sommeil moyennes
+  stressLevel   StressLevel @default(MODERATE)
+  dietType      DietType  @default(OMNIVORE)
+  allergies     String[]  // Allergies alimentaires
+  
+  // Mesures corporelles
+  waistCircumference Float? // Tour de taille cm
+  bodyFatPercent     Float? // % masse grasse
+  muscleMass         Float? // kg
+  
+  // Marqueurs sanguins (derniers résultats)
+  cholesterolTotal   Float?
+  cholesterolHDL     Float?
+  cholesterolLDL     Float?
+  triglycerides      Float?
+  glycemia           Float? // Glycémie à jeun
+  hba1c              Float? // Hémoglobine glyquée
+  vitaminD           Float?
+  vitaminB12         Float?
+  iron               Float? // Fer sérique
+  ferritin           Float?
+  crp                Float? // Protéine C-réactive (inflammation)
+  homocysteine       Float?
+  testosterone       Float? // ng/dL
+  tsh                Float? // Thyroïde
+  
+  // Conditions
+  conditions    String[]  // Diabète, hypertension, etc.
+  medications   String[]  // Médicaments actuels
+  
+  // Onboarding
+  onboardingCompleted Boolean @default(false)
+  onboardingStep      Int     @default(0)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// Recommandations IA
+model Recommendation {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type        RecommendationType
+  category    String   // supplements, diet, exercise
+  title       String
+  description String
+  priority    Int      @default(1) // 1 = haute, 5 = basse
+  
+  // Pour les compléments
+  supplementName  String?
+  dosage          String?
+  timing          String?  // morning, evening, with-meal
+  purchaseUrl     String?
+  monthlyPrice    Float?
+  
+  // Pour les repas
+  mealPlan    Json?
+  
+  // Pour l'exercice
+  exercisePlan Json?
+  
+  // Statut
+  accepted    Boolean  @default(false)
+  dismissed   Boolean  @default(false)
+  
+  reasoning   String?  // Pourquoi cette recommandation
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Family {
@@ -129,8 +218,6 @@ model PushSubscription {
   createdAt DateTime @default(now())
 }
 
-// ========== NOUVEAUX MODÈLES ==========
-
 model Supplement {
   id          String   @id @default(cuid())
   userId      String
@@ -144,6 +231,7 @@ model Supplement {
   purchaseUrl String?
   notes       String?
   active      Boolean  @default(true)
+  isRecommended Boolean @default(false)
   
   logs        SupplementLog[]
   createdAt   DateTime @default(now())
@@ -180,6 +268,7 @@ model ChatMessage {
   role      String
   content   String
   provider  String?
+  isOnboarding Boolean @default(false)
   
   createdAt DateTime @default(now())
 }
@@ -221,6 +310,48 @@ enum Goal {
   GAIN
 }
 
+enum HealthGoal {
+  GENERAL_HEALTH
+  WEIGHT_LOSS
+  MUSCLE_GAIN
+  ENERGY
+  LONGEVITY
+  COGNITIVE
+  SLEEP
+  STRESS
+  IMMUNITY
+  HEART_HEALTH
+  GUT_HEALTH
+  SKIN_HAIR
+  HORMONES
+}
+
+enum StressLevel {
+  LOW
+  MODERATE
+  HIGH
+  VERY_HIGH
+}
+
+enum DietType {
+  OMNIVORE
+  VEGETARIAN
+  VEGAN
+  PESCATARIAN
+  KETO
+  PALEO
+  MEDITERRANEAN
+  LOW_CARB
+  INTERMITTENT_FASTING
+}
+
+enum RecommendationType {
+  SUPPLEMENT
+  MEAL
+  EXERCISE
+  LIFESTYLE
+}
+
 enum MealType {
   BREAKFAST
   LUNCH
@@ -238,5 +369,6 @@ enum WorkoutType {
   RUNNING
   CYCLING
   SWIMMING
+  ZONE2
   OTHER
 }
