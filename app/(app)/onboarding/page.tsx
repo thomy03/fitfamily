@@ -1,124 +1,109 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 
-interface Message {
-  id: string
-  role: string
-  content: string
-}
+type Step = 1 | 2 | 3
+
+const GOALS = [
+  { id: "GENERAL_HEALTH", label: "🏃 Santé générale", desc: "Rester en forme" },
+  { id: "WEIGHT_LOSS", label: "⚖️ Perte de poids", desc: "Perdre du gras" },
+  { id: "MUSCLE_GAIN", label: "💪 Prise de muscle", desc: "Gagner en force" },
+  { id: "ENERGY", label: "⚡ Plus d'énergie", desc: "Combattre la fatigue" },
+  { id: "LONGEVITY", label: "🧬 Longévité", desc: "Anti-âge, rajeunissement cellulaire" },
+  { id: "COGNITIVE", label: "🧠 Cognition", desc: "Mémoire, concentration" },
+  { id: "SLEEP", label: "😴 Meilleur sommeil", desc: "Dormir mieux" },
+  { id: "STRESS", label: "🧘 Réduire le stress", desc: "Calme et sérénité" },
+]
+
+const DIETS = [
+  { id: "OMNIVORE", label: "🍖 Omnivore" },
+  { id: "VEGETARIAN", label: "🥗 Végétarien" },
+  { id: "VEGAN", label: "🌱 Vegan" },
+  { id: "KETO", label: "🥑 Keto/Low-carb" },
+  { id: "MEDITERRANEAN", label: "🫒 Méditerranéen" },
+  { id: "INTERMITTENT_FASTING", label: "⏰ Jeûne intermittent" },
+]
+
+const ACTIVITY_LEVELS = [
+  { id: "SEDENTARY", label: "🪑 Sédentaire", desc: "Peu ou pas d'exercice" },
+  { id: "LIGHT", label: "🚶 Léger", desc: "1-2x/semaine" },
+  { id: "MODERATE", label: "🏃 Modéré", desc: "3-4x/semaine" },
+  { id: "ACTIVE", label: "💪 Actif", desc: "5-6x/semaine" },
+  { id: "VERY_ACTIVE", label: "🏋️ Très actif", desc: "Tous les jours" },
+]
 
 export default function OnboardingPage() {
   const router = useRouter()
-  const [messages, setMessages] = useState<Message[]>([])
-  const [input, setInput] = useState("")
+  const [step, setStep] = useState<Step>(1)
   const [loading, setLoading] = useState(false)
-  const [completed, setCompleted] = useState(false)
   const [generating, setGenerating] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  
+  // Step 1 - Required
+  const [gender, setGender] = useState("")
+  const [birthYear, setBirthYear] = useState("")
+  const [height, setHeight] = useState("")
+  const [weight, setWeight] = useState("")
+  
+  // Step 2 - Optional goals
+  const [primaryGoal, setPrimaryGoal] = useState("")
+  const [activityLevel, setActivityLevel] = useState("MODERATE")
+  const [dietType, setDietType] = useState("OMNIVORE")
+  
+  // Step 3 - Optional health data
+  const [monthlyBudget, setMonthlyBudget] = useState("")
+  const [cholesterolTotal, setCholesterolTotal] = useState("")
+  const [vitaminD, setVitaminD] = useState("")
+  const [sleepHours, setSleepHours] = useState("")
+  const [stressLevel, setStressLevel] = useState("MODERATE")
 
-  useEffect(() => {
-    fetchMessages()
-  }, [])
+  const isStep1Valid = gender && birthYear && height && weight
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
-
-  const fetchMessages = async () => {
+  const handleSubmit = async () => {
+    setLoading(true)
     try {
-      const res = await fetch("/api/onboarding")
-      const data = await res.json()
-      
-      if (data.completed) {
-        setCompleted(true)
+      // Update basic profile
+      await fetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          gender,
+          birthDate: new Date(parseInt(birthYear), 0, 1).toISOString(),
+          height: parseFloat(height),
+          weight: parseFloat(weight),
+          activityLevel
+        })
+      })
+
+      // Create/update health profile
+      await fetch("/api/onboarding/form", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          primaryGoal: primaryGoal || "GENERAL_HEALTH",
+          dietType,
+          monthlyBudget: monthlyBudget ? parseInt(monthlyBudget) : null,
+          cholesterolTotal: cholesterolTotal ? parseFloat(cholesterolTotal) : null,
+          vitaminD: vitaminD ? parseFloat(vitaminD) : null,
+          sleepHours: sleepHours ? parseFloat(sleepHours) : null,
+          stressLevel
+        })
+      })
+
+      setGenerating(true)
+
+      // Generate recommendations
+      await fetch("/api/recommendations", { method: "POST" })
+
+      setTimeout(() => {
         router.push("/dashboard")
-        return
-      }
-
-      if (data.messages?.length > 0) {
-        setMessages(data.messages)
-      } else {
-        // Start onboarding
-        startOnboarding()
-      }
+      }, 1500)
     } catch (error) {
       console.error(error)
-    }
-  }
-
-  const startOnboarding = async () => {
-    setLoading(true)
-    try {
-      const res = await fetch("/api/onboarding", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: "Bonjour, je suis prêt à créer mon profil santé !" })
-      })
-      const data = await res.json()
-      
-      setMessages([
-        { id: "1", role: "user", content: "Bonjour, je suis prêt à créer mon profil santé !" },
-        { id: "2", role: "assistant", content: data.message }
-      ])
-    } catch (error) {
-      console.error(error)
+      alert("Erreur lors de la sauvegarde")
     } finally {
       setLoading(false)
     }
-  }
-
-  const sendMessage = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim() || loading) return
-
-    const userMessage = input.trim()
-    setInput("")
-    setLoading(true)
-
-    setMessages(prev => [...prev, { id: "temp", role: "user", content: userMessage }])
-
-    try {
-      const res = await fetch("/api/onboarding", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage })
-      })
-
-      const data = await res.json()
-
-      setMessages(prev => [
-        ...prev.filter(m => m.id !== "temp"),
-        { id: Date.now().toString(), role: "user", content: userMessage },
-        { id: (Date.now() + 1).toString(), role: "assistant", content: data.message }
-      ])
-
-      if (data.completed) {
-        setCompleted(true)
-        setGenerating(true)
-        
-        // Generate recommendations
-        await fetch("/api/recommendations", { method: "POST" })
-        
-        setTimeout(() => {
-          router.push("/dashboard")
-        }, 2000)
-      }
-    } catch (error) {
-      console.error(error)
-      setMessages(prev => prev.filter(m => m.id !== "temp"))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const resetOnboarding = async () => {
-    if (!confirm("Recommencer l'onboarding ?")) return
-    await fetch("/api/onboarding", { method: "DELETE" })
-    setMessages([])
-    setCompleted(false)
-    startOnboarding()
   }
 
   if (generating) {
@@ -137,84 +122,277 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-80px)] max-w-lg mx-auto">
-      {/* Header */}
-      <div className="p-4 border-b dark:border-gray-700 bg-gradient-to-r from-emerald-500 to-teal-500 text-white">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-lg font-bold">🧬 Profil Santé</h1>
-            <p className="text-sm opacity-80">Onboarding personnalisé</p>
-          </div>
-          <button onClick={resetOnboarding} className="text-sm opacity-70 hover:opacity-100">
-            ↻ Reset
-          </button>
-        </div>
-      </div>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-900">
-        {messages.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-5xl mb-4">🤖</div>
-            <p className="text-gray-500">Chargement...</p>
-          </div>
-        ) : (
-          messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-                  msg.role === "user"
-                    ? "bg-emerald-500 text-white rounded-br-md"
-                    : "bg-white dark:bg-gray-800 shadow-sm rounded-bl-md"
-                }`}
-              >
-                {msg.role === "assistant" && (
-                  <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mb-1">🧬 Jarvis</div>
-                )}
-                <p className="whitespace-pre-wrap">{msg.content}</p>
-              </div>
-            </div>
-          ))
-        )}
-
-        {loading && (
-          <div className="flex justify-start">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
-              <div className="flex gap-1">
-                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
-                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
-                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input */}
-      <form onSubmit={sendMessage} className="p-4 border-t dark:border-gray-700 bg-white dark:bg-gray-800">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ta réponse..."
-            className="flex-1 px-4 py-3 rounded-full border dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-            disabled={loading || completed}
+    <div className="min-h-screen p-4 max-w-lg mx-auto">
+      {/* Progress */}
+      <div className="flex gap-2 mb-6">
+        {[1, 2, 3].map((s) => (
+          <div
+            key={s}
+            className={`flex-1 h-2 rounded-full ${
+              s <= step ? "bg-emerald-500" : "bg-gray-200 dark:bg-gray-700"
+            }`}
           />
+        ))}
+      </div>
+
+      {/* Step 1: Required Info */}
+      {step === 1 && (
+        <div className="space-y-6">
+          <div className="text-center mb-8">
+            <div className="text-5xl mb-3">👤</div>
+            <h1 className="text-2xl font-bold">Informations de base</h1>
+            <p className="text-gray-500 text-sm mt-1">Ces infos sont nécessaires</p>
+          </div>
+
+          {/* Gender */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Sexe *</label>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { id: "MALE", label: "👨 Homme" },
+                { id: "FEMALE", label: "👩 Femme" }
+              ].map((g) => (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => setGender(g.id)}
+                  className={`p-4 rounded-xl border-2 text-center transition-all ${
+                    gender === g.id
+                      ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30"
+                      : "border-gray-200 dark:border-gray-700"
+                  }`}
+                >
+                  <span className="text-lg">{g.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Birth Year */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Année de naissance *</label>
+            <input
+              type="number"
+              value={birthYear}
+              onChange={(e) => setBirthYear(e.target.value)}
+              placeholder="1986"
+              min="1920"
+              max="2010"
+              className="w-full px-4 py-3 rounded-xl border dark:bg-gray-800 dark:border-gray-700 text-lg"
+            />
+          </div>
+
+          {/* Height & Weight */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Taille (cm) *</label>
+              <input
+                type="number"
+                value={height}
+                onChange={(e) => setHeight(e.target.value)}
+                placeholder="175"
+                className="w-full px-4 py-3 rounded-xl border dark:bg-gray-800 dark:border-gray-700 text-lg"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Poids (kg) *</label>
+              <input
+                type="number"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                placeholder="75"
+                className="w-full px-4 py-3 rounded-xl border dark:bg-gray-800 dark:border-gray-700 text-lg"
+              />
+            </div>
+          </div>
+
           <button
-            type="submit"
-            disabled={loading || !input.trim() || completed}
-            className="w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center disabled:opacity-50 hover:bg-emerald-600 transition-colors"
+            onClick={() => setStep(2)}
+            disabled={!isStep1Valid}
+            className="w-full py-4 rounded-xl bg-emerald-500 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            ↑
+            Continuer →
           </button>
         </div>
-      </form>
+      )}
+
+      {/* Step 2: Goals */}
+      {step === 2 && (
+        <div className="space-y-6">
+          <div className="text-center mb-6">
+            <div className="text-5xl mb-3">🎯</div>
+            <h1 className="text-2xl font-bold">Ton objectif</h1>
+            <p className="text-gray-500 text-sm mt-1">Optionnel mais recommandé</p>
+          </div>
+
+          {/* Primary Goal */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Objectif principal</label>
+            <div className="grid grid-cols-2 gap-2">
+              {GOALS.map((g) => (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => setPrimaryGoal(g.id)}
+                  className={`p-3 rounded-xl border-2 text-left transition-all ${
+                    primaryGoal === g.id
+                      ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30"
+                      : "border-gray-200 dark:border-gray-700"
+                  }`}
+                >
+                  <div className="text-sm font-medium">{g.label}</div>
+                  <div className="text-xs text-gray-500">{g.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Activity Level */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Niveau d'activité</label>
+            <select
+              value={activityLevel}
+              onChange={(e) => setActivityLevel(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border dark:bg-gray-800 dark:border-gray-700"
+            >
+              {ACTIVITY_LEVELS.map((a) => (
+                <option key={a.id} value={a.id}>{a.label} - {a.desc}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Diet */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Type d'alimentation</label>
+            <select
+              value={dietType}
+              onChange={(e) => setDietType(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border dark:bg-gray-800 dark:border-gray-700"
+            >
+              {DIETS.map((d) => (
+                <option key={d.id} value={d.id}>{d.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => setStep(1)}
+              className="flex-1 py-4 rounded-xl border dark:border-gray-700"
+            >
+              ← Retour
+            </button>
+            <button
+              onClick={() => setStep(3)}
+              className="flex-1 py-4 rounded-xl bg-emerald-500 text-white font-semibold"
+            >
+              Continuer →
+            </button>
+          </div>
+
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="w-full py-3 text-emerald-600 dark:text-emerald-400 text-sm"
+          >
+            Passer et terminer
+          </button>
+        </div>
+      )}
+
+      {/* Step 3: Advanced (Optional) */}
+      {step === 3 && (
+        <div className="space-y-6">
+          <div className="text-center mb-6">
+            <div className="text-5xl mb-3">🔬</div>
+            <h1 className="text-2xl font-bold">Données santé</h1>
+            <p className="text-gray-500 text-sm mt-1">100% optionnel - pour des recos plus précises</p>
+          </div>
+
+          {/* Budget */}
+          <div>
+            <label className="block text-sm font-medium mb-2">💰 Budget compléments (€/mois)</label>
+            <input
+              type="number"
+              value={monthlyBudget}
+              onChange={(e) => setMonthlyBudget(e.target.value)}
+              placeholder="50"
+              className="w-full px-4 py-3 rounded-xl border dark:bg-gray-800 dark:border-gray-700"
+            />
+          </div>
+
+          {/* Sleep */}
+          <div>
+            <label className="block text-sm font-medium mb-2">😴 Heures de sommeil (moyenne)</label>
+            <input
+              type="number"
+              value={sleepHours}
+              onChange={(e) => setSleepHours(e.target.value)}
+              placeholder="7"
+              step="0.5"
+              className="w-full px-4 py-3 rounded-xl border dark:bg-gray-800 dark:border-gray-700"
+            />
+          </div>
+
+          {/* Stress */}
+          <div>
+            <label className="block text-sm font-medium mb-2">🧘 Niveau de stress</label>
+            <select
+              value={stressLevel}
+              onChange={(e) => setStressLevel(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border dark:bg-gray-800 dark:border-gray-700"
+            >
+              <option value="LOW">😌 Faible</option>
+              <option value="MODERATE">😐 Modéré</option>
+              <option value="HIGH">😰 Élevé</option>
+              <option value="VERY_HIGH">🤯 Très élevé</option>
+            </select>
+          </div>
+
+          {/* Blood markers */}
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
+            <h3 className="font-medium mb-3">🩸 Bilans sanguins (si connus)</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Cholestérol total</label>
+                <input
+                  type="number"
+                  value={cholesterolTotal}
+                  onChange={(e) => setCholesterolTotal(e.target.value)}
+                  placeholder="200"
+                  className="w-full px-3 py-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Vitamine D (ng/mL)</label>
+                <input
+                  type="number"
+                  value={vitaminD}
+                  onChange={(e) => setVitaminD(e.target.value)}
+                  placeholder="30"
+                  className="w-full px-3 py-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => setStep(2)}
+              className="flex-1 py-4 rounded-xl border dark:border-gray-700"
+            >
+              ← Retour
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="flex-1 py-4 rounded-xl bg-emerald-500 text-white font-semibold disabled:opacity-50"
+            >
+              {loading ? "..." : "Terminer ✓"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
